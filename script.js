@@ -10,7 +10,7 @@ let city = [];
 const citiesApi = 'database/cities.json',
     PROXY = 'https://cors-anywhere.herokuapp.com/'
     API_KEY = '3fabc10e29175a675a9ebffdb249bf41',
-    caledar = 'http://min-prices.aviasales.ru/calendar_preload';
+    calendar = 'http://min-prices.aviasales.ru/calendar_preload';
 
 // Функция получения данных с сервера
 const getData = (url, callBack) => {
@@ -38,8 +38,8 @@ const showCity = (input, list) => {
     if (!input.value) return;
 
     const filtercity = city.filter((item) => {
-        return item.name.toLowerCase().includes(input.value.toLowerCase());
-    });
+        return item.name.toLowerCase().startsWith(input.value.toLowerCase());
+    }).sort((a,b) => a.name > b.name);// сортировка по имени
     
     filtercity.forEach((item) => {
         const li = document.createElement('li');
@@ -58,6 +58,25 @@ const onCityClick = (input, list, event) => {
     }
 };
 
+const renderCheapDay = (cheapTicket) => {
+    console.log(cheapTicket);
+};
+const renderCheapYear = (cheapTickets) => {
+    console.log(cheapTickets);
+};
+
+const renderCheap = (data, date) => {
+    const cheapTicketYear = JSON.parse(data).best_prices;
+    const cheapTicketDay = cheapTicketYear.filter((item) => {
+         return item.depart_date === date;
+    })
+    // сортировка по датам
+    const cheapTicketYearSort = cheapTicketYear.sort((a,b) => a.depart_date > b.depart_date);
+
+    renderCheapDay(cheapTicketDay);
+    renderCheapYear(cheapTicketYearSort);
+};
+
 inputCitiesFrom.addEventListener('input', () => {
     showCity(inputCitiesFrom, dropDownCitiesFrom);
 });
@@ -74,19 +93,37 @@ dropDownCitiesTo.addEventListener('click', (event) => {
     onCityClick(inputCitiesTo, dropDownCitiesTo, event);
 });
 
+formSearch.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const cityFrom = city.find(item => item.name === inputCitiesFrom.value),
+        cityTo = city.find(item => item.name === inputCitiesTo.value);
+    
+    const formData = {
+        from: cityFrom.code,
+        to: cityTo.code,
+        when: inputDateDepart.value
+    };
+
+    requestData = `?origin=${formData.from}&destination=${formData.to}&depart_date=${formData.when}&one_way=true`;
+
+    getData(calendar + requestData, (response) => {
+        renderCheap(response, formData.when);
+    });
+});
+
 //Ищем билеты на 25.05.20 
 let showTicket = () => {
     const srcCity = city.find(item => item.name === 'Екатеринбург'),
         destCity = city.find(item => item.name === 'Калининград'),
         depart_date = '2020-05-25',
         one_way = false,
-        url = caledar + `?origin=${srcCity.code}&destination=${destCity.code}&depart_date=${depart_date}&one_way=${one_way}`;
+        url = calendar + `?origin=${srcCity.code}&destination=${destCity.code}&depart_date=${depart_date}&one_way=${one_way}`;
     getData(url, data => console.log(data));
 };
 
 //Загрузка данных
-getData(citiesApi, (data) => {
-    city = JSON.parse(data).filter(item => item.name);
-    showTicket();
-});
+getData(citiesApi, (data) => city = JSON.parse(data).filter(item => item.name));
+
+
 
